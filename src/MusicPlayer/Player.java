@@ -114,29 +114,79 @@ public class Player extends Shell {
         }
 		
 		
-		Button btnNewButton = new Button(composite, SWT.NONE);
-		btnNewButton.setBounds(29, 268, 116, 45);
-		btnNewButton.setText("Repeat");
+		Button btnRepeat = new Button(composite, SWT.NONE);
+		btnRepeat.setBounds(29, 268, 116, 45);
+		btnRepeat.setText("Repeat");
+		btnRepeat.addListener(SWT.Selection, event -> {
+			//adds current song to the next index on the Arraylist
+			if (repeat = false) {
+				repeat = true;
+				btnRepeat.setText("UnRepeat");
+			}
+			else {
+				repeat = false; 
+				btnRepeat.setText("Repeat");
+			}
+			songList.add(i+1, songList.get(i));
+		});
 		
-		Button btnPlay = new Button(composite, SWT.NONE);
-		btnPlay.setText("Play");
-		btnPlay.setBounds(161, 268, 116, 45);
-		btnPlay.addListener(SWT.Selection, event -> {
-			/* creates the browser that has the embedded youtube video, made the size 1 by 1 so it is invisible. Anytime a
-			a new song gets loaded the startTimer method will need to be called */
+		Button btnRestart = new Button(composite, SWT.NONE);
+		btnRestart.setBounds(162, 268, 116, 45);
+		btnRestart.setText("Restart");
+		btnRestart.addListener(SWT.Selection, event -> {
+			Control[] controls = Player.this.getChildren();
+			for (Control control : controls) {
+				if (control instanceof Browser) {
+					control.dispose();
+					}//end if
+			}//end for loop
 			Browser browser = new Browser(this, SWT.NONE);
-			browser.setBounds(50, 50, 1, 1);
-			browser.setUrl(currentSong);
-			startTimer(display);
+			browser.setBounds(50, 50, 200, 200);
+			browser.setUrl(songList.get(i).getUrl());
+			timer = songList.get(i).getDuration();
+		
 		});
 		
 		Button btnPause = new Button(composite, SWT.NONE);
 		btnPause.setText("Pause");
 		btnPause.setBounds(295, 268, 116, 45);
+		btnPause.addListener(SWT.Selection, event -> {
+			/* pauses the video */
+			if(paused == true) {
+				Browser browser = new Browser(composite, SWT.NONE);
+				browser.setBounds(50, 50, 200, 200);
+				browser.setUrl(songList.get(i).getUrl() + "&start=" + resumeTime);
+				btnPause.setText("Pause");
+				paused = false;
+				}//end if
+			else {
+				paused = true;
+				stopTime = timer;
+				resumeTime = songList.get(i).getDuration() - stopTime;
+				Control[] controls = Player.this.getChildren();
+				for (Control control : controls) {
+					if (control instanceof Browser) {
+						control.dispose();
+						}//end if
+				}//end for loop
+			btnPause.setText("Resume"); }//end else
+			});
 		
 		Button btnSkip = new Button(composite, SWT.NONE);
 		btnSkip.setText("Skip");
 		btnSkip.setBounds(429, 268, 116, 45);
+		btnSkip.addListener(SWT.Selection, event -> {
+			/* skips the current song */
+			timer = 0;
+			if (i == songList.size()-1) {
+				Control[] controls = Player.this.getChildren();
+				for (Control control : controls) {
+					if (control instanceof Browser) {
+						control.dispose();
+					}//end if
+				}//end for
+			}//end if
+			});
 		
 		Label lblArtist = new Label(composite, SWT.NONE);
 		lblArtist.setFont(SWTResourceManager.getFont("Segoe UI", 9, SWT.BOLD));
@@ -253,7 +303,7 @@ public class Player extends Shell {
 	 * @param display
 	 */
 	public void startTimer(Display display) {
-		ProgressBar progressBar = new ProgressBar(this, SWT.ON_TOP);
+		ProgressBar progressBar = new ProgressBar(this, SWT.ON_TOP | SWT.BORDER);
 		progressBar.setBounds(26, 237, 518, 14);
 		if(paused == false) {
 			display.timerExec(1000, new Runnable() {
