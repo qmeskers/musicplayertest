@@ -1,6 +1,9 @@
 package MusicPlayer;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.graphics.Point;
@@ -9,6 +12,8 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.ProgressBar;
@@ -19,20 +24,21 @@ import org.eclipse.wb.swt.SWTResourceManager;
 
 public class Player extends Shell {
 	/*for the timer we might want to do something like timer += 2 after we set it when the video loads to account for load 
-	times in the youtube player so the song doesn't cut off early */
-	private int timer = 5; //this number will be replaced with the song length, set to five for testing purposes
-	private int stopTime; //currently unused, will be used for pause button
-	private boolean paused = false; //currently unused, variable will be used to stop timer when song is paused
-	private String currentSong = "https://www.youtube.com/embed/Zmvt7yFTtt8?autoplay=1"; //will be replaced by top of queue 
-	private String testURL = "https://www.youtube.com/embed/MgV-bCxE6ZI?autoplay=1"; //used for testing purposes
-	private ArrayList<Song> songlist = new ArrayList<Song>();// this is the arraylist for the song list-brian
-	
-	
-	  private Song song;
-	    
-	    public Player(String artist, String album, String name, String url, int yearReleased, String genre, int duration) {
-	        this.song = new Song(artist, album, name, url, yearReleased, genre, duration);
-	    }
+    times in the youtube player so the song doesn't cut off early */
+    private int timer;  //this number will be replaced with the song lengthes
+    private int stopTime; //currently unused, will be used for pause button
+    private int resumeTime; //used for pausing and resuming
+    private boolean paused = false; //currently unused, variable will be used to stop timer when song is paused
+    private boolean repeat = false;
+    private int i = 0; //used to track location in Arraylist
+    private String currentSong = "https://www.youtube.com/embed/Zmvt7yFTtt8?autoplay=1"; //will be replaced by top of queue 
+    private String testURL = "https://www.youtube.com/embed/MgV-bCxE6ZI?autoplay=1"; //used for testing purposes
+    private java.util.List<Song> songList = new ArrayList<Song>();// this is the arraylist for the song list-brian
+    private Song song;
+
+    public Player(String artist, String album, String name, String url, int yearReleased, String genre, int duration) {
+        this.song = new Song(artist, album, name, url, yearReleased, genre, duration);
+    }
 	    
 	    
 	/**
@@ -56,15 +62,46 @@ public class Player extends Shell {
 	}
 
 	/**
-	 * Create the shell.
-	 * @param display
-	 * @wbp.parser.constructor
-	 */
+     * Create the shell.
+     * @param display
+     * @throws IOException 
+     * @wbp.parser.constructor
+     */
 	public Player(Display display) {
 		super(display, SWT.SHELL_TRIM);
+		setSize(598, 431);
 		setMaximumSize(new Point(600, 400));
 		setMinimumSize(new Point(600, 400));
 		// load the songs from the JSON file
+        songList = Song.loadSongsFromJson("songsList.json");
+
+        // create the hashmap to store songs by genre
+        HashMap<String, ArrayList<Song>> songsByGenre = new HashMap<>();
+
+        for (Song song : songList) {
+            String genre = song.getGenre();
+            if (!songsByGenre.containsKey(genre)) {
+                songsByGenre.put(genre, new ArrayList<Song>());
+            }
+            songsByGenre.get(genre).add(song);
+        }
+
+        // create the tree widget
+        Tree tree = new Tree(this, SWT.BORDER);
+        tree.setBounds(285, 20, 150, 200);
+
+        // populate the tree with genres as top-level items
+        for (String genre : songsByGenre.keySet()) {
+            TreeItem genreItem = new TreeItem(tree, SWT.NONE);
+            genreItem.setText(genre);
+
+            // add the songs for this genre as children of the genre item
+            for (Song song : songsByGenre.get(genre)) {
+                TreeItem songItem = new TreeItem(genreItem, SWT.NONE);
+                songItem.setText(song.getName());
+                songItem.setData(song);
+            }
+        }
 		
 		
 		
@@ -107,9 +144,6 @@ public class Player extends Shell {
 		Button btnSkip = new Button(composite, SWT.NONE);
 		btnSkip.setText("Skip");
 		btnSkip.setBounds(429, 268, 116, 45);
-		
-		ProgressBar progressBar = new ProgressBar(composite, SWT.NONE);
-		progressBar.setBounds(29, 232, 516, 19);
 		
 		Label lblArtist = new Label(composite, SWT.NONE);
 		lblArtist.setFont(SWTResourceManager.getFont("Segoe UI", 9, SWT.BOLD));
@@ -194,6 +228,15 @@ public class Player extends Shell {
 		playlistNameField.setBounds(280, 10, 100, 20);
 		
 		createContents();
+		//loads the first song
+		Browser browser = new Browser(this, SWT.NONE);
+		browser.setBounds(50, 50, 1, 1);
+		browser.setUrl(songList.get(i).getUrl());
+		lblnameplaying.setText(songList.get(i).getArtist());
+		lblalbumplaying.setText(songList.get(i).getAlbum());
+		lblsongplaying.setText(songList.get(i).getName());
+		timer = songList.get(i).getDuration();
+		startTimer(display);
 	}
 
 	/**
@@ -217,40 +260,46 @@ public class Player extends Shell {
 	 * @param display
 	 */
 	public void startTimer(Display display) {
-	    ProgressBar progressBar = new ProgressBar(this, SWT.NONE);
-	    progressBar.setBounds(26, 237, 518, 14);
-
-	    display.timerExec(1000, new Runnable() {
-	        public void run() {
-	            if (timer > 0) {
-	                timer--;
-	                display.asyncExec(new Runnable() {
-	                    public void run() {
-	                        //code to affect progress bar will go here
-	                    }
-	                });
-	                display.timerExec(1000, this);
-	            } else {
-	                // Stop the timer
-	                display.timerExec(-1, this);
-	                // Remove the Browser widget so we can load the second one
-	                Control[] controls = Player.this.getChildren();
-	                for (Control control : controls) {
-	                    if (control instanceof Browser) {
-	                        control.dispose();
-	                    }
-	                }
-	                //creating the new browser
-	                Browser browser = new Browser(Player.this, SWT.NONE);
-	                browser.setBounds(50, 50, 1, 1);
-	                browser.setUrl(testURL);
-	                // Set the timer variable to 36 for testing purposes will be changed later
-	                timer = 36;
-	                //start timer method will be called again here
-	            }
-	        }
-	    });
-	}
+		ProgressBar progressBar = new ProgressBar(this, SWT.NONE);
+		progressBar.setBounds(26, 237, 518, 14);
+		if(paused == false) {
+			display.timerExec(1000, new Runnable() {
+				public void run() {
+					if (timer > 0) {
+						timer--;
+						display.asyncExec(new Runnable() {
+							public void run() {
+								//code to affect progress bar will go here
+							}
+						});
+						display.timerExec(1000, this);
+					} else {
+						// Stop the timer
+						display.timerExec(-1, this);
+						if (repeat = false) {
+						i++;}//end if
+						// Remove the Browser widget so we can load the second one
+						Control[] controls = Player.this.getChildren();
+						for (Control control : controls) {
+							if (control instanceof Browser) {
+								control.dispose();
+							}//end if
+						}//end for
+						if (i == songList.size() - 1) { //if statment to check if current song is the last in the list
+							return;
+						}//end if
+						//creating the new browser
+						Browser browser = new Browser(Player.this, SWT.NONE);
+						browser.setBounds(50, 50, 1, 1);
+						browser.setUrl(songList.get(i).getUrl());
+						// Set the timer variable to 36 for testing purposes will be changed later
+						timer = songList.get(i).getDuration();
+						//start timer method will be called again here
+					}//end else
+				}
+			});
+			}//end if
+		}//end StartTimer method
 	@Override
 	protected void checkSubclass() {
 		// Disable the check that prevents subclassing of SWT components
