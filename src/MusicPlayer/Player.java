@@ -154,7 +154,7 @@ public class Player extends Shell {
 			/* pauses the video */
 			if(paused == true) {
 				Browser browser = new Browser(composite, SWT.NONE);
-				browser.setBounds(50, 50, 200, 200);
+				browser.setBounds(50, 50, 1, 1);
 				browser.setUrl(songList.get(i).getUrl() + "&start=" + resumeTime);
 				btnPause.setText("Pause");
 				paused = false;
