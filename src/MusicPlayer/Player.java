@@ -85,9 +85,19 @@ public class Player extends Shell {
             }
             songsByGenre.get(genre).add(song);
         }
-
-        // create the tree widget
-        Tree tree = new Tree(this, SWT.BORDER);
+		
+		TabFolder tabFolder = new TabFolder(this, SWT.NONE);
+		tabFolder.setBounds(0, 0, 585, 362);
+		
+		//Now playing tab controls:
+		TabItem tbtmNowPlaying = new TabItem(tabFolder, SWT.NONE);
+		tbtmNowPlaying.setText("Now Playing");
+		
+		Composite composite = new Composite(tabFolder, SWT.NONE);
+		tbtmNowPlaying.setControl(composite);
+		
+		 // create the tree widget
+        Tree tree = new Tree(composite, SWT.BORDER);
         tree.setBounds(285, 20, 150, 200);
 
         // populate the tree with genres as top-level items
@@ -103,23 +113,6 @@ public class Player extends Shell {
             }
         }
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		TabFolder tabFolder = new TabFolder(this, SWT.NONE);
-		tabFolder.setBounds(0, 0, 585, 362);
-		
-		//Now playing tab controls:
-		TabItem tbtmNowPlaying = new TabItem(tabFolder, SWT.NONE);
-		tbtmNowPlaying.setText("Now Playing");
-		
-		Composite composite = new Composite(tabFolder, SWT.NONE);
-		tbtmNowPlaying.setControl(composite);
 		
 		Button btnNewButton = new Button(composite, SWT.NONE);
 		btnNewButton.setBounds(29, 268, 116, 45);
@@ -260,7 +253,7 @@ public class Player extends Shell {
 	 * @param display
 	 */
 	public void startTimer(Display display) {
-		ProgressBar progressBar = new ProgressBar(this, SWT.NONE);
+		ProgressBar progressBar = new ProgressBar(this, SWT.ON_TOP);
 		progressBar.setBounds(26, 237, 518, 14);
 		if(paused == false) {
 			display.timerExec(1000, new Runnable() {
